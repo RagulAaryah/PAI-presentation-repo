@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import copy
 
-from campus_equipment.exceptions import ConflictError, NotFoundError
+from campus_equipment.exceptions import ConflictError, NotFoundError, ValidationError
 
 
 class FakeEquipmentRepository:
@@ -57,7 +57,7 @@ class FakeBorrowerRepository:
 
     def add(self, borrower):
         if any(b.email == borrower.email for b in self._items.values()):
-            raise ConflictError(f"Email already registered: {borrower.email}")
+            raise ValidationError(f"Email already registered: {borrower.email}")
         borrower = copy.copy(borrower)
         borrower.borrower_id = self._next_id
         self._items[self._next_id] = borrower

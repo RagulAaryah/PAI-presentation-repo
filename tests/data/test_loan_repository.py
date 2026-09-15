@@ -129,3 +129,28 @@ def test_mark_returned_twice_raises_conflict(repo, equipment_id, borrower_id):
 
     with pytest.raises(ConflictError):
         repo.mark_returned(saved.loan_id, return_date="2026-09-06")
+
+
+def test_add_second_open_loan_for_same_equipment_raises_conflict(repo, equipment_id, borrower_id):
+    repo.add(
+        Loan(equipment_id=equipment_id, borrower_id=borrower_id, issue_date="2026-09-01", due_date="2026-09-08")
+    )
+
+    with pytest.raises(ConflictError):
+        repo.add(
+            Loan(equipment_id=equipment_id, borrower_id=borrower_id, issue_date="2026-09-02", due_date="2026-09-09")
+        )
+
+
+def test_add_loan_for_equipment_with_only_closed_loans_succeeds(repo, equipment_id, borrower_id):
+    first = repo.add(
+        Loan(equipment_id=equipment_id, borrower_id=borrower_id, issue_date="2026-09-01", due_date="2026-09-08")
+    )
+    repo.mark_returned(first.loan_id, return_date="2026-09-05")
+
+    second = repo.add(
+        Loan(equipment_id=equipment_id, borrower_id=borrower_id, issue_date="2026-09-06", due_date="2026-09-13")
+    )
+
+    assert second.loan_id is not None
+    assert second.loan_id != first.loan_id

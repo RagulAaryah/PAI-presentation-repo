@@ -43,3 +43,17 @@ class LoanService:
         equipment.status = "on_loan"
         self._equipment.update(equipment)
         return loan
+
+    def return_loan(self, loan_id: int, return_date: str) -> None:
+        loan = self._loans.get(loan_id)  # raises NotFoundError if the loan doesn't exist
+        self._loans.mark_returned(loan_id, return_date)  # raises ConflictError if already returned
+
+        equipment = self._equipment.get(loan.equipment_id)
+        equipment.status = "available"
+        self._equipment.update(equipment)
+
+    def list_open_loans(self) -> list[Loan]:
+        return self._loans.find_open()
+
+    def list_overdue_loans(self, as_of_date: str) -> list[Loan]:
+        return self._loans.find_overdue(as_of_date)

@@ -35,3 +35,14 @@ class MaintenanceService:
         equipment.status = "maintenance"
         self._equipment.update(equipment)
         return record
+
+    def resolve_maintenance(self, maintenance_id: int, resolved_date: str) -> None:
+        record = self._maintenance.get(maintenance_id)  # raises NotFoundError if unknown
+        self._maintenance.mark_resolved(maintenance_id, resolved_date)  # raises ConflictError if already resolved
+
+        equipment = self._equipment.get(record.equipment_id)
+        equipment.status = "available"
+        self._equipment.update(equipment)
+
+    def list_open_maintenance(self) -> list[MaintenanceRecord]:
+        return self._maintenance.find_open()

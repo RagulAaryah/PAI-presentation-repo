@@ -60,16 +60,34 @@ def _seeded_database(with_indexes: bool) -> sqlite3.Connection:
         borrower_rows,
     )
 
+    # At most one OPEN loan (return_date IS NULL) per equipment_id is now
+    # enforced by idx_loan_one_open_per_equipment (schema.sql), so open
+    # loans can't be assigned to equipment_id fully at random -- there are
+    # only N_EQUIPMENT possible open slots. open_pool is a shuffled queue
+    # of equipment_ids handed out one-per-open-loan; once it's exhausted,
+    # any further loan that "wants" to be open is generated closed instead
+    # (any equipment_id is fine for a closed loan, open or not).
+    open_pool = list(range(1, N_EQUIPMENT + 1))
+    rng.shuffle(open_pool)
+    next_open_slot = 0
+
     loan_rows = []
     for _ in range(N_LOANS):
         issue_offset = rng.randint(-90, 0)
         due_offset = issue_offset + rng.randint(3, 21)
-        return_date = None
-        if rng.random() < 0.5:
+        wants_open = rng.random() >= 0.5
+
+        if wants_open and next_open_slot < len(open_pool):
+            equipment_id = open_pool[next_open_slot]
+            next_open_slot += 1
+            return_date = None
+        else:
+            equipment_id = rng.randint(1, N_EQUIPMENT)
             return_date = (today + timedelta(days=issue_offset + rng.randint(1, 20))).isoformat()
+
         loan_rows.append(
             (
-                rng.randint(1, N_EQUIPMENT),
+                equipment_id,
                 rng.randint(1, N_BORROWERS),
                 (today + timedelta(days=issue_offset)).isoformat(),
                 (today + timedelta(days=due_offset)).isoformat(),

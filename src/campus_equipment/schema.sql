@@ -42,6 +42,19 @@ CREATE TABLE IF NOT EXISTS loan (
     CHECK (return_date IS NULL OR return_date >= issue_date)
 );
 
+-- Structurally prevents double-booking: at most one OPEN loan
+-- (return_date IS NULL) per equipment_id. A partial UNIQUE index rather
+-- than a plain one, because equipment is meant to be re-loaned after a
+-- loan closes -- only a second *open* row for the same equipment_id
+-- should be rejected. This is what makes "an item cannot be issued
+-- while it's already on loan" hold even for a write that bypasses
+-- LoanService.issue_loan's check-then-write entirely (a bug, a future
+-- feature, a bulk import, a second service) -- structurally prevented,
+-- not merely discouraged by application code.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_loan_one_open_per_equipment
+    ON loan (equipment_id)
+    WHERE return_date IS NULL;
+
 CREATE TABLE IF NOT EXISTS maintenance_record (
     maintenance_id INTEGER PRIMARY KEY AUTOINCREMENT,
     equipment_id    INTEGER NOT NULL,

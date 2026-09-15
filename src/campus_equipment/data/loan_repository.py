@@ -24,12 +24,17 @@ class LoanRepository:
         ).fetchone() is None:
             raise NotFoundError(f"No borrower with id {loan.borrower_id}")
 
-        cursor = self._conn.execute(
-            "INSERT INTO loan (equipment_id, borrower_id, issue_date, due_date, return_date) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (loan.equipment_id, loan.borrower_id, loan.issue_date, loan.due_date, loan.return_date),
-        )
-        self._conn.commit()
+        try:
+            cursor = self._conn.execute(
+                "INSERT INTO loan (equipment_id, borrower_id, issue_date, due_date, return_date) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (loan.equipment_id, loan.borrower_id, loan.issue_date, loan.due_date, loan.return_date),
+            )
+            self._conn.commit()
+        except sqlite3.IntegrityError as exc:
+            raise ConflictError(
+                f"Equipment {loan.equipment_id} already has an open loan"
+            ) from exc
         loan.loan_id = cursor.lastrowid
         return loan
 
